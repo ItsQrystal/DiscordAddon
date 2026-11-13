@@ -27,7 +27,6 @@
 
 ## Modules
 
----
 
 ### [MinecraftToDiscord](#minecrafttodiscord)
 Bridges your in-game Minecraft chat directly into a Discord text channel using webhooks. Every message sent in-game gets instantly forwarded to your Discord server.
