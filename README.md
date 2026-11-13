@@ -6,7 +6,7 @@
 <p align="center">Created by QrystalGG</p>
 
 <p align="center">
-  A custom Meteor Client addon featuring seamless two-way Discord and Minecraft chat integration.
+  A Meteor Client addon which acts as a bridge between your minecraft client and discord .
 </p>
 
 <p align="center">
