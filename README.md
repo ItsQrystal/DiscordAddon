@@ -6,7 +6,8 @@
 <p align="center">Created by QrystalGG</p>
 
 <p align="center">
-  A Meteor Client addon which acts as a bridge between your minecraft client and discord .
+  A Meteor Client addon which acts as a bridge between your minecraft client and discord . 
+  ( copilot commits/pushes cuz i was using the codespaces feature )
 </p>
 
 <p align="center">
