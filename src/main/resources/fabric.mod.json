@@ -1,0 +1,29 @@
+{
+  "schemaVersion": 1,
+  "id": "discord-addon",
+  "version": "${version}",
+  "name": "Discord Addon",
+  "description": "Discord addon acts as a bridge between your Minecraft chat and Discord server.",
+  "authors": [
+    "QrystalGG"
+  ],
+  "contact": {
+    "repo": "https://github.com/ItsQrystal/DiscordAddon"
+  },
+  "icon": "assets/discord-addon/icon.png",
+  "environment": "client",
+  "entrypoints": {
+    "meteor": [
+      "com.discord.addon.Addon"
+    ]
+  },
+  "mixins": [],
+  "custom": {
+    "meteor-client:color": "34,14,211"
+  },
+  "depends": {
+    "java": ">=21",
+    "minecraft": "1.21.11",
+    "meteor-client": "*"
+  }
+}
