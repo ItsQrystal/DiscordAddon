@@ -1,6 +1,5 @@
 package com.discord.addon;
 
-import com.discord.addon.commands.*;
 import com.discord.addon.modules.*;
 import com.mojang.logging.LogUtils;
 import meteordevelopment.meteorclient.addons.MeteorAddon;
