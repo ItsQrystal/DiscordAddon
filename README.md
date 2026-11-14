@@ -20,7 +20,7 @@
 # How to Use
 1. Download the latest build JAR.
 2. Put the `.jar` file in your `.minecraft/mods` folder with Meteor Client installed.
-3. Ensure you are running Minecraft 1.21.1.
+3. Ensure you are running Minecraft 1.21.11.
 4. Open the Meteor ClickGUI in-game, navigate to the modules, and configure your settings.
 
 ---
