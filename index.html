@@ -1,0 +1,1843 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Discord Addon — Meteor Client Bridge</title>
+    <!-- Importing GG Sans font stylesheet -->
+    <link href="https://db.onlinewebfonts.com/c/f57e0ad5cb1a9f73e5da78da2f7c469f?family=gg+sans" rel="stylesheet" type="text/css"/>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link rel="icon" type="image/png" href="https://cdn.discordapp.com/attachments/1411680946536583269/1570810800279523409/image.png?ex=6af9c48f&is=6af8730f&hm=573e9a5d1efbf45b4a8295131b22b707749e17b3165a802ed9d27f612928e476&">
+    
+    <style>
+        :root {
+            --server-rail: #0d0e10;
+            --channel-sidebar: #141518;
+            --chat-bg: #1a1b1f;
+            --hover-bg: #202227;
+            --embed-bg: #141518;
+            --input-bg: #24262b;
+            --blurple: #5865F2;
+            --blurple-hover: #4752C4;
+            --green: #23a559;
+            --red: #da373c;
+            --text-main: #f2f3f5;
+            --text-muted: #949ba4;
+            --text-channel: #80848e;
+            --divider: #26282e;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: "gg sans", "Noto Sans", "Helvetica Neue", Helvetica, Arial, sans-serif;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        body {
+            background-color: var(--server-rail);
+            color: var(--text-main);
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        /* --- TOP TITLE BAR & NITRO BANNER --- */
+        .title-bar {
+            height: 24px;
+            background-color: #0b0b0d;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            -webkit-app-region: drag;
+            border-bottom: 1px solid #000;
+        }
+
+        .nitro-banner {
+            height: 30px;
+            background-color: #5a2ea6;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.85rem;
+            color: white;
+            font-weight: 600;
+            gap: 15px;
+            z-index: 100;
+        }
+
+        .nitro-btn {
+            background: white;
+            color: black;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            text-decoration: none;
+            font-weight: 600;
+            transition: background 0.15s;
+        }
+
+        .nitro-btn:hover {
+            background: #e3e5e8;
+        }
+
+        .app-container {
+            display: flex;
+            flex: 1;
+            overflow: hidden;
+        }
+
+        /* --- SERVER RAIL --- */
+        .server-rail {
+            width: 72px;
+            background-color: var(--server-rail);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding-top: 12px;
+            gap: 10px;
+            flex-shrink: 0;
+            border-right: 1px solid #090a0b;
+            overflow-y: auto;
+            overflow-x: hidden;
+        }
+
+        .server-rail::-webkit-scrollbar { width: 0px; }
+
+        .server-icon {
+            width: 48px;
+            height: 48px;
+            border-radius: 50%;
+            background-color: transparent; /* Removed black background */
+            color: var(--text-main);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.35rem;
+            cursor: pointer;
+            transition: border-radius 0.2s, background-color 0.2s;
+            position: relative;
+            border: none;
+            flex-shrink: 0;
+        }
+
+        .server-icon img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            border-radius: 50%;
+            transition: border-radius 0.2s;
+        }
+
+        .server-icon.active, .server-icon:hover {
+            border-radius: 16px;
+            background-color: var(--blurple);
+            color: white;
+        }
+
+        .server-icon.active img, .server-icon:hover img {
+            border-radius: 16px;
+        }
+
+        .server-icon.active::before {
+            content: '';
+            position: absolute;
+            left: -12px;
+            width: 4px;
+            height: 36px;
+            background-color: white;
+            border-radius: 0 4px 4px 0;
+        }
+
+        .server-icon.home {
+            background-color: var(--chat-bg);
+            color: var(--text-main);
+        }
+
+        .server-icon.home:hover, .server-icon.home.active {
+            background-color: var(--blurple);
+            border-radius: 16px;
+        }
+
+        .rail-divider {
+            width: 32px;
+            height: 2px;
+            background-color: var(--divider);
+            border-radius: 1px;
+            flex-shrink: 0;
+        }
+
+        .add-server {
+            color: var(--green);
+            background-color: var(--chat-bg);
+        }
+
+        .add-server:hover {
+            background-color: var(--green);
+            color: white;
+        }
+
+        /* --- SIDEBAR --- */
+        .sidebar {
+            width: 240px;
+            background-color: var(--channel-sidebar);
+            display: flex;
+            flex-direction: column;
+            flex-shrink: 0;
+            border-right: 1px solid #0f1012;
+        }
+
+        .server-header {
+            height: 48px;
+            padding: 0 16px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            font-weight: 700;
+            font-size: 0.98rem;
+            border-bottom: 1px solid #0f1012;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.2);
+            cursor: pointer;
+            z-index: 10;
+        }
+
+        .server-header:hover {
+            background-color: var(--hover-bg);
+        }
+
+        .channel-list {
+            padding: 14px 8px;
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+            overflow-y: auto;
+        }
+
+        .channel-list::-webkit-scrollbar { width: 0px; }
+
+        .category-wrapper {
+            margin-top: 16px;
+        }
+        .category-wrapper:first-child { margin-top: 0; }
+
+        .category-name {
+            font-size: 0.72rem;
+            font-weight: 700;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.02em;
+            padding: 0 8px 4px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            cursor: pointer;
+            user-select: none;
+        }
+
+        .category-name:hover {
+            color: var(--text-main);
+        }
+
+        .category-arrow {
+            font-size: 0.6rem;
+            margin-right: 4px;
+        }
+        
+        .category-plus {
+            font-size: 0.9rem;
+            opacity: 0;
+            transition: opacity 0.1s;
+        }
+
+        .category-name:hover .category-plus {
+            opacity: 1;
+        }
+
+        .channel {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 6px 10px;
+            border-radius: 4px;
+            color: var(--text-channel);
+            font-weight: 500;
+            font-size: 0.95rem;
+            cursor: pointer;
+            transition: background-color 0.12s, color 0.12s;
+            user-select: none;
+            margin-bottom: 2px;
+        }
+
+        .channel:hover {
+            background-color: #1f2126;
+            color: #dbdee1;
+        }
+
+        .channel.active {
+            background-color: #292b32;
+            color: var(--text-main);
+            font-weight: 600;
+        }
+
+        .channel.locked {
+            opacity: 0.65;
+        }
+
+        .channel i {
+            font-size: 1.1rem;
+            width: 20px;
+            text-align: center;
+        }
+
+        /* User Bar at bottom of Sidebar */
+        .user-bar {
+            height: 54px;
+            background-color: #0f1013;
+            padding: 0 10px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            border-top: 1px solid #18191d;
+            flex-shrink: 0;
+        }
+
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 9px;
+            cursor: pointer;
+            padding: 4px 6px;
+            border-radius: 4px;
+        }
+
+        .user-info:hover {
+            background-color: #1c1d22;
+        }
+
+        .avatar-small {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background-color: transparent;
+            position: relative;
+            flex-shrink: 0;
+        }
+
+        .avatar-small img {
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            object-fit: cover;
+            background: transparent;
+        }
+
+        .status-dot {
+            width: 12px;
+            height: 12px;
+            background-color: var(--green);
+            border: 3px solid #0f1013;
+            border-radius: 50%;
+            position: absolute;
+            bottom: -2px;
+            right: -2px;
+        }
+
+        .status-dot.idle { background-color: #f0b232; }
+        .status-dot.dnd { background-color: var(--red); }
+        .status-dot.offline { background-color: #80848e; }
+
+        .user-controls {
+            display: flex;
+            gap: 2px;
+        }
+
+        .control-btn {
+            background: none;
+            border: none;
+            color: var(--text-muted);
+            width: 30px;
+            height: 30px;
+            border-radius: 4px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.95rem;
+            transition: background-color 0.15s, color 0.15s;
+        }
+
+        .control-btn:hover {
+            background-color: #23252b;
+            color: var(--text-main);
+        }
+
+        .control-btn.muted {
+            color: var(--red);
+        }
+
+        /* --- MAIN CHAT AREA --- */
+        .chat-area {
+            flex: 1;
+            background-color: var(--chat-bg);
+            display: flex;
+            flex-direction: column;
+            min-width: 0;
+        }
+
+        /* FIXED: Added proper gap and alignment for header */
+        .chat-header {
+            height: 48px;
+            padding: 0 16px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            border-bottom: 1px solid #121316;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.2);
+            z-index: 10;
+            flex-shrink: 0;
+        }
+
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            min-width: 0;
+        }
+
+        .header-left i {
+            color: var(--text-muted);
+            font-size: 1.15rem;
+        }
+
+        .header-title {
+            font-weight: 700;
+            font-size: 0.98rem;
+        }
+
+        .header-topic {
+            color: var(--text-muted);
+            font-size: 0.85rem;
+            border-left: 1px solid var(--divider);
+            padding-left: 12px;
+            margin-left: 4px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        /* FIXED: Added gap and flex alignment to spread these out properly */
+        .header-right {
+            display: flex;
+            gap: 16px;
+            color: var(--text-muted);
+            font-size: 1.1rem;
+            align-items: center;
+            flex-shrink: 0;
+        }
+        
+        .header-right i {
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .header-right i:hover {
+            color: var(--text-main);
+        }
+
+        .search-box {
+            background-color: var(--server-rail);
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            width: 144px;
+            cursor: text;
+            margin-right: 4px;
+        }
+
+        .search-box span {
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .messages-feed {
+            flex: 1;
+            padding: 20px 0;
+            overflow-y: auto;
+            display: none;
+            flex-direction: column;
+            gap: 18px;
+        }
+
+        .messages-feed.active {
+            display: flex;
+        }
+        
+        .messages-feed::-webkit-scrollbar { width: 8px; }
+        .messages-feed::-webkit-scrollbar-track { background: transparent; }
+        .messages-feed::-webkit-scrollbar-thumb { background: #1a1b1e; border-radius: 4px; }
+
+        .welcome-banner {
+            padding: 16px 20px 14px;
+            border-bottom: 1px solid var(--divider);
+            margin: 0 20px 4px;
+        }
+
+        .welcome-icon {
+            width: 64px;
+            height: 64px;
+            border-radius: 50%;
+            background-color: transparent;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.8rem;
+            margin-bottom: 12px;
+            overflow: hidden;
+            color: var(--text-main);
+        }
+
+        .welcome-icon img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            background: transparent;
+        }
+
+        .welcome-banner h1 {
+            font-size: 1.75rem;
+            font-weight: 700;
+            margin-bottom: 4px;
+        }
+
+        .welcome-banner p {
+            color: var(--text-muted);
+            font-size: 0.92rem;
+        }
+
+        .message {
+            display: flex;
+            gap: 16px;
+            padding: 6px 20px;
+            transition: background-color 0.1s;
+        }
+
+        .message:hover {
+            background-color: var(--hover-bg);
+        }
+
+        .msg-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background-color: transparent;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.15rem;
+            flex-shrink: 0;
+            margin-top: 2px;
+            overflow: hidden;
+        }
+
+        .msg-avatar img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            background: transparent;
+        }
+
+        .msg-avatar.mc {
+            background-color: var(--green);
+        }
+
+        .msg-body {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .msg-header {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            margin-bottom: 4px;
+        }
+
+        .username {
+            font-weight: 600;
+            font-size: 0.98rem;
+            color: var(--text-main);
+            cursor: pointer;
+        }
+
+        .username:hover {
+            text-decoration: underline;
+        }
+
+        .bot-tag {
+            background-color: var(--blurple);
+            color: white;
+            font-size: 0.62rem;
+            font-weight: 700;
+            padding: 2px 5px;
+            border-radius: 3px;
+            letter-spacing: 0.03em;
+            line-height: 1;
+            display: inline-flex;
+            align-items: center;
+            gap: 3px;
+        }
+
+        .timestamp {
+            font-size: 0.74rem;
+            color: var(--text-muted);
+            margin-left: 2px;
+        }
+
+        .msg-text {
+            font-size: 0.95rem;
+            color: #dbdee1;
+            line-height: 1.45;
+        }
+        
+        .msg-text strong {
+            color: white;
+        }
+
+        .msg-text code {
+            background-color: #111214;
+            padding: 2px 5px;
+            border-radius: 3px;
+            font-family: Consolas, Monaco, monospace;
+            font-size: 0.85rem;
+        }
+
+        .msg-text a {
+            color: #00a8fc;
+            text-decoration: none;
+        }
+
+        .msg-text a:hover {
+            text-decoration: underline;
+        }
+
+        .embed {
+            margin-top: 8px;
+            background-color: var(--embed-bg);
+            border-left: 4px solid var(--blurple);
+            border-radius: 4px;
+            padding: 12px 16px;
+            max-width: 540px;
+            border-top: 1px solid #101114;
+            border-right: 1px solid #101114;
+            border-bottom: 1px solid #101114;
+        }
+
+        .embed.green {
+            border-left-color: var(--green);
+        }
+
+        .embed-title {
+            font-weight: 700;
+            font-size: 0.98rem;
+            margin-bottom: 6px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .embed-desc {
+            color: #b5bac1;
+            font-size: 0.88rem;
+            margin-bottom: 10px;
+            line-height: 1.4;
+        }
+
+        .embed-fields {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+
+        .field-name {
+            font-size: 0.8rem;
+            font-weight: 700;
+            color: var(--text-main);
+        }
+
+        .field-val {
+            font-size: 0.82rem;
+            color: var(--text-muted);
+            font-family: Consolas, Monaco, monospace;
+            background: #0d0e10;
+            padding: 3px 7px;
+            border-radius: 3px;
+            display: inline-block;
+            margin-top: 3px;
+        }
+
+        .discord-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            margin-top: 10px;
+            background-color: var(--blurple);
+            color: white;
+            padding: 8px 16px;
+            border-radius: 4px;
+            font-weight: 600;
+            font-size: 0.88rem;
+            text-decoration: none;
+            transition: background-color 0.15s;
+            cursor: pointer;
+            border: none;
+        }
+
+        .discord-btn:hover {
+            background-color: var(--blurple-hover);
+        }
+
+        .discord-btn.green {
+            background-color: var(--green);
+        }
+
+        .discord-btn.green:hover {
+            background-color: #1d8a4a;
+        }
+
+        .discord-btn.secondary {
+            background-color: #2b2d34;
+            margin-left: 8px;
+        }
+
+        .discord-btn.secondary:hover {
+            background-color: #3a3d46;
+        }
+
+        .chat-input-wrapper {
+            padding: 0 20px 20px;
+            flex-shrink: 0;
+        }
+
+        .chat-input-box {
+            background-color: var(--input-bg);
+            border-radius: 8px;
+            padding: 11px 16px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            color: var(--text-muted);
+            font-size: 0.92rem;
+        }
+
+        .input-left {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+        }
+        
+        .input-left i {
+            font-size: 1.15rem;
+            cursor: pointer;
+            transition: color 0.15s;
+        }
+        
+        .input-left i:hover {
+            color: var(--text-main);
+        }
+
+        /* --- MEMBER LIST --- */
+        .member-list {
+            width: 240px;
+            background-color: var(--channel-sidebar);
+            display: none;
+            flex-direction: column;
+            flex-shrink: 0;
+            border-left: 1px solid #0f1012;
+            padding: 16px 8px;
+            overflow-y: auto;
+        }
+        
+        .member-list::-webkit-scrollbar { width: 0px; }
+
+        .member-list.active {
+            display: flex;
+        }
+        
+        .activity-block {
+            margin-bottom: 20px;
+        }
+
+        .activity-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 0.75rem;
+            font-weight: 700;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            padding: 0 8px 8px;
+        }
+
+        .activity-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 6px 8px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-bottom: 4px;
+            background-color: var(--server-rail);
+        }
+
+        .activity-item:hover {
+            background-color: var(--hover-bg);
+        }
+
+        .activity-avatar {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+        }
+
+        .activity-avatar img {
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+        }
+
+        .activity-info {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .activity-user {
+            font-size: 0.9rem;
+            font-weight: 600;
+            color: var(--text-main);
+        }
+
+        .activity-text {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+        }
+
+        .activity-img {
+            width: 48px;
+            height: 48px;
+            border-radius: 4px;
+            margin-left: auto;
+        }
+
+        .member-group {
+            margin-bottom: 16px;
+        }
+
+        .group-title {
+            font-size: 0.75rem;
+            font-weight: 700;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            padding: 0 8px 4px;
+        }
+
+        .member-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 6px 8px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-bottom: 2px;
+        }
+
+        .member-item:hover {
+            background-color: var(--hover-bg);
+        }
+        
+        .member-item.offline {
+            opacity: 0.4;
+        }
+
+        .member-avatar {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            position: relative;
+            flex-shrink: 0;
+        }
+
+        .member-avatar img {
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            object-fit: cover;
+        }
+        
+        .member-avatar .status-dot {
+            border-color: var(--channel-sidebar);
+        }
+
+        .member-info {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .member-name {
+            font-size: 0.95rem;
+            font-weight: 500;
+            color: #dbdee1;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+        
+        .member-role {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+        
+        .role-icon {
+            width: 12px;
+            height: 12px;
+            background-color: var(--blurple);
+            border-radius: 50%;
+            display: inline-block;
+        }
+
+        .toast {
+            position: fixed;
+            bottom: 84px;
+            right: 24px;
+            background-color: #111215;
+            border-left: 4px solid var(--blurple);
+            color: var(--text-main);
+            padding: 12px 16px;
+            border-radius: 6px;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.6);
+            font-size: 0.88rem;
+            z-index: 999;
+            opacity: 0;
+            transform: translateY(12px);
+            pointer-events: none;
+            transition: opacity 0.2s, transform 0.2s;
+            max-width: 340px;
+        }
+
+        .toast.show {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        @media (max-width: 1000px) {
+            .member-list { display: none !important; }
+        }
+        @media (max-width: 768px) {
+            .header-topic { display: none; }
+            .sidebar { width: 190px; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="title-bar">Client Hub</div>
+    <div class="nitro-banner">
+        <span>You have 6 days left to get 40% off Nitro</span>
+        <a href="#" class="nitro-btn" onclick="showToast('Nitro promo clicked!'); return false;">Claim Your Nitro Discount!</a>
+    </div>
+
+    <div class="app-container">
+        <!-- SERVER RAIL -->
+        <div class="server-rail">
+            <button class="server-icon home" onclick="showToast('Direct Messages are not supported in this preview.');" title="Direct Messages">
+                <i class="fa-brands fa-discord"></i>
+            </button>
+            <div class="rail-divider"></div>
+            <button class="server-icon active" data-server="main" title="Discord Addon">
+                <img src="https://cdn.discordapp.com/attachments/1411680946536583269/1570810800279523409/image.png?ex=6af9c48f&is=6af8730f&hm=573e9a5d1efbf45b4a8295131b22b707749e17b3165a802ed9d27f612928e476&" alt="Discord Addon">
+            </button>
+            <button class="server-icon" data-server="ocean" title="Ocean Client">
+                <img src="https://cdn.discordapp.com/attachments/1215320296391835708/1571249123229958255/ocean.png?ex=6afa0b47&is=6af8b9c7&hm=ca6d07ca075a2460026612312f518e01c0595ec6b33e6fb9a9021efb379f91a5&" alt="Ocean Client">
+            </button>
+            <button class="server-icon" data-server="clienthub" title="Client Hub">
+                <img src="https://cdn.discordapp.com/attachments/1215320296391835708/1571248937665564863/ClientHub.png?ex=6afa0b1b&is=6af8b99b&hm=0eb2e5df7ed5d08e09493fa2df1f833f9754c620dc47a6e7f658f9223ddbb1fc&" alt="Client Hub">
+            </button>
+            <button class="server-icon" data-server="salt" title="Salt Client">
+                <img src="https://cdn.discordapp.com/attachments/1215320296391835708/1571249034536951808/image.png?ex=6afa0b32&is=6af8b9b2&hm=3822ad3094b60eb350574bc19cf50dc1fa5f45e9f13f2f941652bf9674315cfb&" alt="Salt Client">
+            </button>
+            <button class="server-icon add-server" onclick="showToast('Server creation is disabled in this preview.');" title="Add a Server">
+                <i class="fa-solid fa-plus"></i>
+            </button>
+        </div>
+
+        <!-- CHANNEL SIDEBAR -->
+        <div class="sidebar">
+            <div class="server-header">
+                <span id="server-name">Discord Addon</span>
+                <i class="fa-solid fa-chevron-down" style="font-size: 0.8rem; color: var(--text-muted);"></i>
+            </div>
+
+            <div class="channel-list" id="channel-list">
+                <!-- Populated dynamically per server -->
+            </div>
+
+            <div class="user-bar">
+                <div class="user-info" onclick="triggerEasterEgg('profile')">
+                    <div class="avatar-small">
+                        <img src="https://cdn.discordapp.com/attachments/1215320296391835708/1564253007338537000/qyrtsla.png?ex=6af9a423&is=6af852a3&hm=8dee2750e4d063ba3dee11ad28ef9ec14aaf88a223f356773512c79ec70e3a08&" alt="QrystalGG">
+                        <span class="status-dot"></span>
+                    </div>
+                    <div>
+                        <div style="font-weight: 600; font-size: 0.86rem; line-height: 1.15;">QrystalGG</div>
+                        <div style="font-size: 0.72rem; color: var(--text-muted);">Online</div>
+                    </div>
+                </div>
+                <div class="user-controls">
+                    <button class="control-btn" id="btn-mic" onclick="triggerEasterEgg('mic')" title="Mute">
+                        <i class="fa-solid fa-microphone"></i>
+                    </button>
+                    <button class="control-btn" id="btn-deafen" onclick="triggerEasterEgg('deafen')" title="Deafen">
+                        <i class="fa-solid fa-headphones"></i>
+                    </button>
+                    <button class="control-btn" id="btn-settings" onclick="triggerEasterEgg('settings')" title="User Settings">
+                        <i class="fa-solid fa-gear"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- MAIN CHAT AREA -->
+        <div class="chat-area">
+            <div class="chat-header">
+                <div class="header-left">
+                    <i class="fa-solid fa-hashtag"></i>
+                    <span class="header-title" id="header-title">overview</span>
+                    <span class="header-topic" id="header-topic">Client-sided Discord and Minecraft chat bridge for Meteor Client</span>
+                </div>
+                <div class="header-right">
+                    <i class="fa-solid fa-thumbtack" title="Pinned Messages" onclick="showToast('No pinned messages yet.');"></i>
+                    <i class="fa-solid fa-user-group" title="Members"></i>
+                    <div class="search-box">
+                        <span>Search Client Hub</span>
+                        <i class="fa-solid fa-magnifying-glass" style="font-size: 0.85rem; margin-left: auto;"></i>
+                    </div>
+                    <i class="fa-solid fa-inbox" title="Inbox"></i>
+                    <i class="fa-solid fa-circle-question" title="Help" onclick="showToast('Opening Help Center...');"></i>
+                </div>
+            </div>
+
+            <!-- MAIN -> #overview -->
+            <div class="messages-feed active" id="feed-main-overview">
+                <div class="welcome-banner">
+                    <div class="welcome-icon"><i class="fa-solid fa-hashtag"></i></div>
+                    <h1>Welcome to #overview!</h1>
+                    <p>Client-sided two-way chat syncing between Minecraft and Discord.</p>
+                </div>
+
+                <div class="message">
+                    <div class="msg-avatar">
+                        <img src="https://cdn.discordapp.com/attachments/1411680946536583269/1570810800279523409/image.png?ex=6af9c48f&is=6af8730f&hm=573e9a5d1efbf45b4a8295131b22b707749e17b3165a802ed9d27f612928e476&" alt="Discord Addon">
+                    </div>
+                    <div class="msg-body">
+                        <div class="msg-header">
+                            <span class="username">Discord Addon</span>
+                            <span class="bot-tag"><i class="fa-solid fa-check"></i> APP</span>
+                            <span class="timestamp">Today at 12:00 AM</span>
+                        </div>
+                        <div class="msg-text">
+                            A lightweight Meteor Client addon that connects your in-game Minecraft chat to a Discord channel. Everything runs locally on your client—no server plugins or operator permissions needed.
+                        </div>
+                        <div class="embed">
+                            <div class="embed-title">How It Works</div>
+                            <div class="embed-desc">
+                                Uses a Discord Bot to read messages from your channel and send them in-game, and a Webhook to forward your in-game chat back to Discord.
+                            </div>
+                            <div class="embed-fields">
+                                <div>
+                                    <div class="field-name">Environment</div>
+                                    <div class="field-val">Client-Side Only</div>
+                                </div>
+                                <div>
+                                    <div class="field-name">Target Version</div>
+                                    <div class="field-val">Minecraft 1.21.11</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- MAIN -> #downloads -->
+            <div class="messages-feed" id="feed-main-downloads">
+                <div class="welcome-banner">
+                    <div class="welcome-icon"><i class="fa-solid fa-download"></i></div>
+                    <h1>Welcome to #downloads!</h1>
+                    <p>Grab the latest release jar and place it in your mods folder.</p>
+                </div>
+
+                <div class="message">
+                    <div class="msg-avatar">
+                        <img src="https://cdn.discordapp.com/attachments/1215320296391835708/1564253007338537000/qyrtsla.png?ex=6af9a423&is=6af852a3&hm=8dee2750e4d063ba3dee11ad28ef9ec14aaf88a223f356773512c79ec70e3a08&" alt="QrystalGG">
+                    </div>
+                    <div class="msg-body">
+                        <div class="msg-header">
+                            <span class="username">QrystalGG</span>
+                            <span class="bot-tag" style="background: var(--green);"><i class="fa-solid fa-crown"></i> OWNER</span>
+                            <span class="timestamp">Today at 12:05 AM</span>
+                        </div>
+                        <div class="msg-text">
+                            Ready to enhance your Meteor experience? Make sure Fabric Loader and Meteor Client (1.21.11) are installed before launching. Newer versions like <strong>26.2</strong> and <strong>26.3</strong> are coming soon!
+                        </div>
+                        <div class="embed green">
+                            <div class="embed-title">Discord Addon v1.0</div>
+                            <div class="embed-desc">
+                                Includes JDA (Java Discord API) shaded into the jar so no extra dependency mods are required. Just drop it in and play.
+                            </div>
+                            <div class="embed-fields">
+                                <div>
+                                    <div class="field-name">Minecraft</div>
+                                    <div class="field-val">1.21.11 Fabric</div>
+                                </div>
+                                <div>
+                                    <div class="field-name">Release</div>
+                                    <div class="field-val">v1.0 Latest</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div style="margin-top: 12px; display: flex; gap: 8px;">
+                            <a href="https://github.com/ItsQrystal/DiscordAddon/releases" target="_blank" class="discord-btn green">
+                                <i class="fa-solid fa-download"></i> Download v1.1 JAR
+                            </a>
+                            <a href="https://github.com/ItsQrystal/DiscordAddon" target="_blank" class="discord-btn">
+                                <i class="fa-brands fa-github"></i> GitHub Repo
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- MAIN -> #showcase -->
+            <div class="messages-feed" id="feed-main-showcase">
+                <div class="welcome-banner">
+                    <div class="welcome-icon"><i class="fa-solid fa-image"></i></div>
+                    <h1>Welcome to #showcase!</h1>
+                    <p>In-game screenshots and Discord bridge previews.</p>
+                </div>
+
+                <div class="message">
+                    <div class="msg-avatar">
+                        <img src="https://cdn.discordapp.com/attachments/1215320296391835708/1564253007338537000/qyrtsla.png?ex=6af9a423&is=6af852a3&hm=8dee2750e4d063ba3dee11ad28ef9ec14aaf88a223f356773512c79ec70e3a08&" alt="QrystalGG">
+                    </div>
+                    <div class="msg-body">
+                        <div class="msg-header">
+                            <span class="username">QrystalGG</span>
+                            <span class="timestamp">Today at 12:10 AM</span>
+                        </div>
+                        <div class="msg-text">
+                            Here is how the ClickGUI modules and live Discord chat relay look in-game. (Pictures coming soon)
+                        </div>
+                        <div class="embed" style="max-width: 400px; text-align: center; padding: 30px;">
+                            <i class="fa-regular fa-image" style="font-size: 2.5rem; color: var(--text-muted); margin-bottom: 10px;"></i>
+                            <div style="color: var(--text-muted); font-size: 0.9rem;">Showcase images will be added later.</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- MAIN -> #discord-to-mc (Includes Setup Guide) -->
+            <div class="messages-feed" id="feed-main-discord-to-mc">
+                <div class="welcome-banner">
+                    <div class="welcome-icon"><i class="fa-solid fa-arrow-right-to-bracket"></i></div>
+                    <h1>#discord-to-mc</h1>
+                    <p>Module Category: Discord Addon — Incoming Discord Relay</p>
+                </div>
+
+                <div class="message">
+                    <div class="msg-avatar"><i class="fa-brands fa-discord"></i></div>
+                    <div class="msg-body">
+                        <div class="msg-header">
+                            <span class="username">Discord To Minecraft</span>
+                            <span class="bot-tag"><i class="fa-solid fa-check"></i> MODULE</span>
+                            <span class="timestamp">Today at 12:15 AM</span>
+                        </div>
+                        <div class="msg-text">
+                            Connects to a Discord Bot using JDA on a separate background thread so your game FPS never drops. Whenever a user types in the linked channel, your player automatically sends that message into Minecraft chat.
+                        </div>
+                        <div class="embed">
+                            <div class="embed-title">Settings &amp; Behavior</div>
+                            <div class="embed-desc">
+                                Built-in loop protection automatically ignores bot accounts and webhook messages so relayed chat never echoes infinitely.
+                            </div>
+                            <div class="embed-fields">
+                                <div>
+                                    <div class="field-name">bot-token</div>
+                                    <div class="field-val">Discord Bot Token</div>
+                                </div>
+                                <div>
+                                    <div class="field-name">channel-id</div>
+                                    <div class="field-val">Target Channel ID</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Setup Guide for Discord to MC -->
+                <div class="message">
+                    <div class="msg-avatar">
+                        <img src="https://cdn.discordapp.com/attachments/1215320296391835708/1564253007338537000/qyrtsla.png?ex=6af9a423&is=6af852a3&hm=8dee2750e4d063ba3dee11ad28ef9ec14aaf88a223f356773512c79ec70e3a08&" alt="QrystalGG">
+                    </div>
+                    <div class="msg-body">
+                        <div class="msg-header">
+                            <span class="username">QrystalGG</span>
+                            <span class="bot-tag" style="background: var(--green);"><i class="fa-solid fa-crown"></i> OWNER</span>
+                            <span class="timestamp">Today at 12:20 AM</span>
+                        </div>
+                        <div class="msg-text">
+                            <strong>How to set up Discord -> Minecraft:</strong>
+                            <br><br>
+                            <strong>1.</strong> Head to the <a href="https://discord.com/developers/applications" target="_blank">Discord Developer Portal</a> and create a New Application.
+                            <br><strong>2.</strong> Go to the "Bot" tab, click "Reset Token", and copy your <strong>Bot Token</strong>. (Keep this secret!)
+                            <br><strong>3.</strong> Scroll down on the Bot page and enable <strong>Message Content Intent</strong>.
+                            <br><strong>4.</strong> Invite the bot to your server using the OAuth2 URL Generator (select `bot` scope and give it Read/Send Messages permissions).
+                            <br><strong>5.</strong> Turn on Developer Mode in Discord (User Settings -> Advanced), right-click your desired channel, and click "Copy Channel ID".
+                            <br><strong>6.</strong> Paste both into the Meteor Client GUI for this module and you're done!
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- MAIN -> #mc-to-discord (Includes Setup Guide) -->
+            <div class="messages-feed" id="feed-main-mc-to-discord">
+                <div class="welcome-banner">
+                    <div class="welcome-icon"><i class="fa-solid fa-paper-plane"></i></div>
+                    <h1>#mc-to-discord</h1>
+                    <p>Module Category: Discord Addon — Outgoing Minecraft Relay</p>
+                </div>
+
+                <div class="message">
+                    <div class="msg-avatar mc"><i class="fa-solid fa-cube"></i></div>
+                    <div class="msg-body">
+                        <div class="msg-header">
+                            <span class="username">MinecraftToDiscord</span>
+                            <span class="bot-tag"><i class="fa-solid fa-check"></i> MODULE</span>
+                            <span class="timestamp">Today at 12:16 AM</span>
+                        </div>
+                        <div class="msg-text">
+                            Hooks into Meteor's <code>ReceiveMessageEvent</code> to capture incoming server chat and forward it directly to your Discord channel through a Webhook.
+                        </div>
+                        <div class="embed green">
+                            <div class="embed-title">Settings &amp; Behavior</div>
+                            <div class="embed-desc">
+                                Dispatches non-blocking HTTP POST requests via <code>CompletableFuture</code> so network latency never freezes your client tick loop.
+                            </div>
+                            <div class="embed-fields">
+                                <div>
+                                    <div class="field-name">webhook-url</div>
+                                    <div class="field-val">Discord Webhook URL</div>
+                                </div>
+                                <div>
+                                    <div class="field-name">Execution</div>
+                                    <div class="field-val">Async HttpClient</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Setup Guide for MC to Discord -->
+                <div class="message">
+                    <div class="msg-avatar">
+                        <img src="https://cdn.discordapp.com/attachments/1215320296391835708/1564253007338537000/qyrtsla.png?ex=6af9a423&is=6af852a3&hm=8dee2750e4d063ba3dee11ad28ef9ec14aaf88a223f356773512c79ec70e3a08&" alt="QrystalGG">
+                    </div>
+                    <div class="msg-body">
+                        <div class="msg-header">
+                            <span class="username">QrystalGG</span>
+                            <span class="bot-tag" style="background: var(--green);"><i class="fa-solid fa-crown"></i> OWNER</span>
+                            <span class="timestamp">Today at 12:22 AM</span>
+                        </div>
+                        <div class="msg-text">
+                            <strong>How to set up Minecraft -> Discord:</strong>
+                            <br><br>
+                            <strong>1.</strong> Open Discord and go to the channel you want to bridge.
+                            <br><strong>2.</strong> Click the gear icon (Edit Channel) next to the channel name.
+                            <br><strong>3.</strong> Go to <strong>Integrations</strong> -> <strong>Webhooks</strong> and click "New Webhook".
+                            <br><strong>4.</strong> Customize the name/avatar if you want, then click "Copy Webhook URL".
+                            <br><strong>5.</strong> Paste this URL into the Meteor Client GUI for this module. Any chat you see in-game will now be sent to Discord!
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- MAIN -> #ingame-meteor-gui -->
+            <div class="messages-feed" id="feed-main-ingame-meteor-gui">
+                <div class="welcome-banner">
+                    <div class="welcome-icon"><i class="fa-solid fa-window-maximize"></i></div>
+                    <h1>#ingame-meteor-gui</h1>
+                    <p>In-game ClickGUI preview for the Discord Addon.</p>
+                </div>
+
+                <div class="message">
+                    <div class="msg-avatar"><i class="fa-solid fa-cube"></i></div>
+                    <div class="msg-body">
+                        <div class="msg-header">
+                            <span class="username">Meteor Client</span>
+                            <span class="bot-tag">GUI</span>
+                            <span class="timestamp">Today at 12:18 AM</span>
+                        </div>
+                        <div class="msg-text">
+                            Here is exactly how the Discord Addon modules appear in the Meteor ClickGUI. It's simple, clean, and fits right in with the rest of your Meteor modules.
+                        </div>
+                        
+                        <!-- METEOR GUI RECREATION -->
+                        <div class="meteor-gui-container" style="margin-top: 15px; width: 320px; background-color: #2b2b2b; border: 2px solid #1a1a1a; box-shadow: 4px 4px 0px rgba(0,0,0,0.4);">
+                            <div class="meteor-header" style="background-color: #9a0000; color: white; padding: 6px 10px; font-size: 1.25rem; display: flex; justify-content: space-between; align-items: center; text-shadow: 1px 1px 0px #000; border-bottom: 1px solid #1a1a1a; font-family: monospace;">
+                                <span>Discord Addon</span>
+                                <span style="font-size: 0.9rem; color: #bbb;">▼</span>
+                            </div>
+                            <div class="meteor-module" style="padding: 6px 10px; color: #b0b0b0; font-size: 1.15rem; text-shadow: 1px 1px 0px #000; font-family: monospace;">
+                                Discord To Minecraft
+                            </div>
+                            <div class="meteor-module" style="padding: 6px 10px; color: #b0b0b0; font-size: 1.15rem; text-shadow: 1px 1px 0px #000; font-family: monospace;">
+                                MinecraftToDiscord
+                            </div>
+                        </div>
+                        
+                    </div>
+                </div>
+            </div>
+
+            <!-- Fallbacks for other servers -->
+            <div class="messages-feed" id="feed-ocean-announcements">
+                <div class="welcome-banner">
+                    <div class="welcome-icon"><img src="https://cdn.discordapp.com/attachments/1215320296391835708/1571249123229958255/ocean.png?ex=6afa0b47&is=6af8b9c7&hm=ca6d07ca075a2460026612312f518e01c0595ec6b33e6fb9a9021efb379f91a5&" alt="Ocean"></div>
+                    <h1>Ocean Client</h1>
+                    <p>Anarchy utility client built for performance and crystal PvP.</p>
+                </div>
+                <div class="message">
+                    <div class="msg-avatar"><img src="https://cdn.discordapp.com/attachments/1215320296391835708/1571249123229958255/ocean.png?ex=6afa0b47&is=6af8b9c7&hm=ca6d07ca075a2460026612312f518e01c0595ec6b33e6fb9a9021efb379f91a5&" alt="Ocean"></div>
+                    <div class="msg-body">
+                        <div class="msg-header"><span class="username">Ocean Client</span><span class="bot-tag">BOT</span></div>
+                        <div class="msg-text">Check out the official Ocean Client website below: <br><a href="https://www.oceanclient.com/" target="_blank">https://www.oceanclient.com/</a></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="messages-feed" id="feed-clienthub-links">
+                <div class="welcome-banner">
+                    <div class="welcome-icon"><img src="https://cdn.discordapp.com/attachments/1215320296391835708/1571248937665564863/ClientHub.png?ex=6afa0b1b&is=6af8b99b&hm=0eb2e5df7ed5d08e09493fa2df1f833f9754c620dc47a6e7f658f9223ddbb1fc&" alt="ClientHub"></div>
+                    <h1>Client Hub</h1>
+                    <p>The central hub for Minecraft clients, addons, configs, and jar scans.</p>
+                </div>
+                <div class="message">
+                    <div class="msg-avatar"><img src="https://cdn.discordapp.com/attachments/1215320296391835708/1571248937665564863/ClientHub.png?ex=6afa0b1b&is=6af8b99b&hm=0eb2e5df7ed5d08e09493fa2df1f833f9754c620dc47a6e7f658f9223ddbb1fc&" alt="ClientHub"></div>
+                    <div class="msg-body">
+                        <div class="msg-header"><span class="username">Client Hub</span><span class="bot-tag">BOT</span></div>
+                        <div class="msg-text">Join the Client Hub community to browse verified clients, addons, and releases.</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="messages-feed" id="feed-salt-download">
+                <div class="welcome-banner">
+                    <div class="welcome-icon"><img src="https://cdn.discordapp.com/attachments/1215320296391835708/1571249034536951808/image.png?ex=6afa0b32&is=6af8b9b2&hm=3822ad3094b60eb350574bc19cf50dc1fa5f45e9f13f2f941652bf9674315cfb&" alt="Salt"></div>
+                    <h1>Salt Client</h1>
+                    <p>Clean, lightweight ghost & utility client experience.</p>
+                </div>
+                <div class="message">
+                    <div class="msg-avatar"><img src="https://cdn.discordapp.com/attachments/1215320296391835708/1571249034536951808/image.png?ex=6afa0b32&is=6af8b9b2&hm=3822ad3094b60eb350574bc19cf50dc1fa5f45e9f13f2f941652bf9674315cfb&" alt="Salt"></div>
+                    <div class="msg-body">
+                        <div class="msg-header"><span class="username">Salt Client</span><span class="bot-tag">BOT</span></div>
+                        <div class="msg-text">Access the official Salt Client website and Discord server. <br> <a href="https://saltclient.github.io/" target="">https://saltclient.github.io/</a></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="chat-input-wrapper">
+                <div class="chat-input-box">
+                    <div class="input-left">
+                        <i class="fa-solid fa-circle-plus" onclick="triggerEasterEgg('plus')"></i>
+                        <span id="input-placeholder">Message #overview</span>
+                    </div>
+                    <div class="input-right" style="display: flex; gap: 14px; font-size: 1.05rem;">
+                        <i class="fa-solid fa-gift" style="cursor: pointer;" onclick="triggerEasterEgg('gift')"></i>
+                        <i class="fa-solid fa-face-smile" style="cursor: pointer;" onclick="triggerEasterEgg('emoji')"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ==================== MEMBER LISTS ==================== -->
+        
+        <!-- MAIN MEMBERS (Client Hub Style) -->
+        <div class="member-list active" id="members-main">
+            <!-- Activity Mockup -->
+            <div class="activity-block">
+                <div class="activity-header">
+                    <span>Activity — 12</span>
+                    <i class="fa-solid fa-chevron-right" style="font-size: 0.7rem; cursor: pointer;"></i>
+                </div>
+                <div class="activity-item">
+                    <div class="activity-avatar"><img src="https://i.pravatar.cc/150?u=juusk" alt="JuusK"></div>
+                    <div class="activity-info">
+                        <div class="activity-user">JuusK</div>
+                        <div class="activity-text">Kanye West</div>
+                        <div class="activity-text" style="font-size: 0.65rem; color: #b5bac1;"><i class="fa-solid fa-headphones"></i> 88 tracks this week</div>
+                    </div>
+                    <img src="https://ui-avatars.com/api/?name=K&background=000&color=fff" class="activity-img" alt="Kanye">
+                </div>
+                <div class="activity-item">
+                    <div class="activity-avatar"><img src="https://i.pravatar.cc/150?u=primezero" alt="PrimeZero"></div>
+                    <div class="activity-info">
+                        <div class="activity-user">PrimeZero</div>
+                        <div class="activity-text">Whiteboard</div>
+                        <div class="activity-text" style="font-size: 0.65rem; color: #b5bac1;">15d ago • 6 friend(s)</div>
+                    </div>
+                    <img src="https://ui-avatars.com/api/?name=W&background=fff&color=000" class="activity-img" alt="Whiteboard">
+                </div>
+            </div>
+
+            <div class="member-group">
+                <div class="group-title">Owner — 2</div>
+                <div class="member-item">
+                    <div class="member-avatar">
+                        <img src="https://i.pravatar.cc/150?u=juusk" alt="JuusK">
+                        <div class="status-dot"></div>
+                    </div>
+                    <div class="member-info">
+                        <div class="member-name" style="color: #f0b232;">JuusK</div>
+                    </div>
+                </div>
+                <div class="member-item">
+                    <div class="member-avatar">
+                        <img src="https://i.pravatar.cc/150?u=qrystalgg" alt="QrystalGG">
+                        <div class="status-dot"></div>
+                    </div>
+                    <div class="member-info">
+                        <div class="member-name" style="color: #f0b232;">QrystalGG</div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="member-group">
+                <div class="group-title">Moderator — 1</div>
+                <div class="member-item">
+                    <div class="member-avatar">
+                        <img src="https://i.pravatar.cc/150?u=danme" alt="danme">
+                        <div class="status-dot idle"></div>
+                    </div>
+                    <div class="member-info">
+                        <div class="member-name">danme <span style="color: var(--blurple); font-size: 0.7rem; font-weight: bold;">DISC</span></div>
+                        <div class="member-role">Need for Speed: Host</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="member-group">
+                <div class="group-title">Partner — 1</div>
+                <div class="member-item">
+                    <div class="member-avatar">
+                        <img src="https://i.pravatar.cc/150?u=nbh" alt="NBH">
+                        <div class="status-dot"></div>
+                    </div>
+                    <div class="member-info">
+                        <div class="member-name">NBH</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="member-group">
+                <div class="group-title">Member — 77</div>
+                <div class="member-item">
+                    <div class="member-avatar">
+                        <img src="https://i.pravatar.cc/150?u=ta3dv" alt="Ta3Dv">
+                        <div class="status-dot dnd"></div>
+                    </div>
+                    <div class="member-info">
+                        <div class="member-name">! Ta3 Dv 👑</div>
+                    </div>
+                </div>
+                <div class="member-item">
+                    <div class="member-avatar">
+                        <img src="https://i.pravatar.cc/150?u=artic" alt="Artic">
+                        <div class="status-dot"></div>
+                    </div>
+                    <div class="member-info">
+                        <div class="member-name">! ArticXOG <span style="color: #ed4245; font-size: 0.7rem; font-weight: bold;">C10</span></div>
+                        <div class="member-role">INACTIVE TILL Dec 1</div>
+                    </div>
+                </div>
+                <div class="member-item">
+                    <div class="member-avatar">
+                        <img src="https://i.pravatar.cc/150?u=job" alt="Job">
+                        <div class="status-dot"></div>
+                    </div>
+                    <div class="member-info">
+                        <div class="member-name"># job application</div>
+                        <div class="member-role">community task</div>
+                    </div>
+                </div>
+                <div class="member-item offline">
+                    <div class="member-avatar">
+                        <img src="https://i.pravatar.cc/150?u=sky" alt="SkyTheKid">
+                        <div class="status-dot offline"></div>
+                    </div>
+                    <div class="member-info">
+                        <div class="member-name">SkyTheKid</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- OCEAN MEMBERS -->
+        <div class="member-list" id="members-ocean">
+            <div class="member-group">
+                <div class="group-title">Owner — 1</div>
+                <div class="member-item">
+                    <div class="member-avatar">
+                        <img src="https://i.pravatar.cc/150?u=oceanowner" alt="OceanDev">
+                        <div class="status-dot"></div>
+                    </div>
+                    <div class="member-info">
+                        <div class="member-name" style="color: #00BFFF;">OceanDev</div>
+                    </div>
+                </div>
+            </div>
+            <div class="member-group">
+                <div class="group-title">Online — 4</div>
+                <div class="member-item">
+                    <div class="member-avatar">
+                        <img src="https://i.pravatar.cc/150?u=crystal" alt="CrystalPvP">
+                        <div class="status-dot"></div>
+                    </div>
+                    <div class="member-info">
+                        <div class="member-name">CrystalPvP</div>
+                        <div class="member-role">Tester</div>
+                    </div>
+                </div>
+                <div class="member-item">
+                    <div class="member-avatar">
+                        <img src="https://i.pravatar.cc/150?u=anchor" alt="AnchorMain">
+                        <div class="status-dot"></div>
+                    </div>
+                    <div class="member-info">
+                        <div class="member-name">AnchorMain</div>
+                    </div>
+                </div>
+                <div class="member-item">
+                    <div class="member-avatar">
+                        <img src="https://i.pravatar.cc/150?u=water" alt="WaterGang">
+                        <div class="status-dot idle"></div>
+                    </div>
+                    <div class="member-info">
+                        <div class="member-name">WaterGang</div>
+                    </div>
+                </div>
+                <div class="member-item">
+                    <div class="member-avatar">
+                        <img src="https://i.pravatar.cc/150?u=pearl" alt="PearlSpam">
+                        <div class="status-dot"></div>
+                    </div>
+                    <div class="member-info">
+                        <div class="member-name">PearlSpam</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- CLIENT HUB MEMBERS -->
+        <div class="member-list" id="members-clienthub">
+            <div class="member-group">
+                <div class="group-title">Admin — 1</div>
+                <div class="member-item">
+                    <div class="member-avatar">
+                        <img src="https://i.pravatar.cc/150?u=hubadmin" alt="HubAdmin">
+                        <div class="status-dot"></div>
+                    </div>
+                    <div class="member-info">
+                        <div class="member-name" style="color: #9b59b6;">HubAdmin</div>
+                    </div>
+                </div>
+            </div>
+            <div class="member-group">
+                <div class="group-title">Online — 5</div>
+                <div class="member-item">
+                    <div class="member-avatar">
+                        <img src="https://i.pravatar.cc/150?u=mod1" alt="Moderator">
+                        <div class="status-dot"></div>
+                    </div>
+                    <div class="member-info">
+                        <div class="member-name">Mod_Steve</div>
+                    </div>
+                </div>
+                <div class="member-item">
+                    <div class="member-avatar">
+                        <img src="https://i.pravatar.cc/150?u=scanner" alt="JarScanner">
+                        <div class="status-dot"></div>
+                    </div>
+                    <div class="member-info">
+                        <div class="member-name">JarScannerBot</div>
+                        <div class="member-role"><div class="role-icon"></div> Bot</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- SALT MEMBERS -->
+        <div class="member-list" id="members-salt">
+            <div class="member-group">
+                <div class="group-title">Owner — 1</div>
+                <div class="member-item">
+                    <div class="member-avatar">
+                        <img src="https://i.pravatar.cc/150?u=saltowner" alt="SaltDev">
+                        <div class="status-dot"></div>
+                    </div>
+                    <div class="member-info">
+                        <div class="member-name" style="color: #FFA500;">SaltDev</div>
+                    </div>
+                </div>
+            </div>
+            <div class="member-group">
+                <div class="group-title">Online — 3</div>
+                <div class="member-item">
+                    <div class="member-avatar">
+                        <img src="https://i.pravatar.cc/150?u=ghost" alt="GhostClient">
+                        <div class="status-dot"></div>
+                    </div>
+                    <div class="member-info">
+                        <div class="member-name">GhostClient</div>
+                    </div>
+                </div>
+                <div class="member-item">
+                    <div class="member-avatar">
+                        <img src="https://i.pravatar.cc/150?u=util" alt="UtilityUser">
+                        <div class="status-dot"></div>
+                    </div>
+                    <div class="member-info">
+                        <div class="member-name">UtilityUser</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <div class="toast" id="toast"></div>
+
+    <script>
+        const serverData = {
+            main: {
+                name: "Discord Addon",
+                defaultChannel: "overview",
+                categories: [
+                    {
+                        title: "Main",
+                        channels: [
+                            { id: "overview", name: "overview", topic: "Client-sided Discord and Minecraft chat bridge for Meteor Client", locked: false },
+                            { id: "downloads", name: "downloads", topic: "v1.0 Release for 1.21.11 (v26.2 & v26.3 coming soon)", locked: false },
+                            { id: "showcase", name: "showcase", topic: "Screenshots and live chat bridge previews", locked: false }
+                        ]
+                    },
+                    {
+                        title: "Modules",
+                        channels: [
+                            { id: "discord-to-mc", name: "discord-to-mc", topic: "Relays Discord channel messages into Minecraft chat", locked: false },
+                            { id: "mc-to-discord", name: "mc-to-discord", topic: "Forwards incoming Minecraft chat to Discord via webhook", locked: false },
+                            { id: "ingame-meteor-gui", name: "ingame-meteor-gui", topic: "Meteor Client ClickGUI preview", locked: false }
+                        ]
+                    }
+                ]
+            },
+            ocean: {
+                name: "Ocean Client",
+                defaultChannel: "announcements",
+                categories: [
+                    {
+                        title: "Gateway",
+                        channels: [
+                            { id: "announcements", name: "announcements", topic: "Official Ocean Client links and updates", locked: false },
+                            { id: "rules", name: "rules", topic: "", locked: true },
+                            { id: "sneakpeeks", name: "sneakpeeks", topic: "", locked: true }
+                        ]
+                    }
+                ]
+            },
+            clienthub: {
+                name: "Client Hub",
+                defaultChannel: "links",
+                categories: [
+                    {
+                        title: "Server",
+                        channels: [
+                            { id: "links", name: "links", topic: "Official Client Hub invite and directory", locked: false },
+                            { id: "general", name: "general", topic: "", locked: true }
+                        ]
+                    }
+                ]
+            },
+            salt: {
+                name: "Salt Client",
+                defaultChannel: "download",
+                categories: [
+                    {
+                        title: "Client",
+                        channels: [
+                            { id: "download", name: "download", topic: "Official Salt Client website and Discord invite", locked: false },
+                            { id: "updates", name: "updates", topic: "", locked: true }
+                        ]
+                    }
+                ]
+            }
+        };
+
+        let currentServer = "main";
+        const serverIcons = document.querySelectorAll('.server-icon[data-server]');
+        const serverNameEl = document.getElementById('server-name');
+        const channelListEl = document.getElementById('channel-list');
+        const headerTitleEl = document.getElementById('header-title');
+        const headerTopicEl = document.getElementById('header-topic');
+        const inputPlaceholderEl = document.getElementById('input-placeholder');
+        const feeds = document.querySelectorAll('.messages-feed');
+        
+        // Member Lists
+        const allMemberLists = document.querySelectorAll('.member-list');
+
+        function renderServer(serverKey) {
+            currentServer = serverKey;
+            const data = serverData[serverKey];
+            serverNameEl.textContent = data.name;
+
+            // Update server rail active state
+            serverIcons.forEach(btn => {
+                btn.classList.toggle('active', btn.dataset.server === serverKey);
+            });
+
+            // Render channels
+            channelListEl.innerHTML = "";
+            data.categories.forEach(cat => {
+                const catWrapper = document.createElement('div');
+                catWrapper.className = 'category-wrapper';
+                
+                const catEl = document.createElement('div');
+                catEl.className = 'category-name';
+                catEl.innerHTML = `
+                    <div style="display: flex; align-items: center; gap: 4px;">
+                        <i class="fa-solid fa-chevron-down category-arrow"></i> ${cat.title}
+                    </div>
+                    <i class="fa-solid fa-plus category-plus"></i>
+                `;
+                catWrapper.appendChild(catEl);
+
+                cat.channels.forEach(ch => {
+                    const chEl = document.createElement('div');
+                    chEl.className = 'channel' + (ch.locked ? ' locked' : '');
+                    chEl.dataset.channel = ch.id;
+                    chEl.innerHTML = `
+                        <i class="fa-solid ${ch.locked ? 'fa-lock' : 'fa-hashtag'}"></i>
+                        <span>${ch.name}</span>
+                    `;
+                    chEl.addEventListener('click', () => {
+                        if (ch.locked) {
+                            showToast(`🔒 #${ch.name} is read-only. Join the ${data.name} Discord to view!`);
+                            return;
+                        }
+                        switchChannel(ch.id, ch.name, ch.topic);
+                    });
+                    catWrapper.appendChild(chEl);
+                });
+                
+                channelListEl.appendChild(catWrapper);
+            });
+
+            // Render member list
+            allMemberLists.forEach(list => list.classList.remove('active'));
+            const activeList = document.getElementById(`members-${serverKey}`);
+            if (activeList) {
+                activeList.classList.add('active');
+            }
+
+            // Switch to default channel
+            const firstCat = data.categories[0];
+            const defaultCh = firstCat.channels.find(c => c.id === data.defaultChannel) || firstCat.channels[0];
+            switchChannel(defaultCh.id, defaultCh.name, defaultCh.topic);
+        }
+
+        function switchChannel(channelId, channelName, topic) {
+            document.querySelectorAll('.channel').forEach(el => {
+                el.classList.toggle('active', el.dataset.channel === channelId);
+            });
+
+            headerTitleEl.textContent = channelName;
+            headerTopicEl.textContent = topic;
+            inputPlaceholderEl.textContent = `Message #${channelName}`;
+
+            feeds.forEach(f => {
+                f.classList.toggle('active', f.id === `feed-${currentServer}-${channelId}`);
+            });
+        }
+
+        serverIcons.forEach(btn => {
+            btn.addEventListener('click', () => {
+                renderServer(btn.dataset.server);
+            });
+        });
+
+        let micMuted = false;
+        let deafened = false;
+
+        function triggerEasterEgg(type) {
+            if (type === 'mic') {
+                micMuted = !micMuted;
+                const btn = document.getElementById('btn-mic');
+                btn.classList.toggle('muted', micMuted);
+                btn.innerHTML = micMuted ? '<i class="fa-solid fa-microphone-slash"></i>' : '<i class="fa-solid fa-microphone"></i>';
+                showToast(micMuted ? 'Mic muted — In-game chat relay still running!' : 'Mic unmuted!');
+            } else if (type === 'deafen') {
+                deafened = !deafened;
+                const btn = document.getElementById('btn-deafen');
+                btn.classList.toggle('muted', deafened);
+                showToast(deafened ? 'Deafened — Blocking out global server spam.' : 'Undeafened!');
+            } else if (type === 'settings') {
+                showToast('Bridge Config: Webhook & JDA Thread healthy (0ms lag).');
+            } else if (type === 'profile') {
+                showToast('QrystalGG — Creator of Discord Addon');
+            } else if (type === 'gift') {
+                showToast('Free Nitro? Nah, just free open-source Meteor addons.');
+            } else if (type === 'emoji') {
+                showToast('Bridge status: Connected to 1.21.11');
+            } else if (type === 'plus') {
+                showToast('Tip: Drop discord-addon-1.0.jar straight into .minecraft/mods');
+            }
+        }
+
+        let toastTimer;
+        function showToast(msg) {
+            const toast = document.getElementById('toast');
+            toast.textContent = msg;
+            toast.classList.add('show');
+            clearTimeout(toastTimer);
+            toastTimer = setTimeout(() => {
+                toast.classList.remove('show');
+            }, 3000);
+        }
+
+        // Initialize
+        renderServer('main');
+    </script>
+
+</body>
+</html>
