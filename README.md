@@ -28,7 +28,7 @@
 ## Modules
 
 
-### [MinecraftToDiscord](#minecrafttodiscord)
+### [MinecraftToDiscord](https://github.com/ItsQrystal/DiscordAddon/blob/main/src/main/java/com/discord/addon/modules/MinecraftToDiscord.java)
 Bridges your in-game Minecraft chat directly into a Discord text channel using webhooks. Every message sent in-game gets instantly forwarded to your Discord server.
 
 **How to Use & Configure:**
@@ -39,7 +39,7 @@ Bridges your in-game Minecraft chat directly into a Discord text channel using w
 
 ---
 
-### [DiscordToMinecraft](#discordtominecraft)
+### [DiscordToMinecraft](https://github.com/ItsQrystal/DiscordAddon/blob/main/src/main/java/com/discord/addon/modules/DiscordToMinecraft.java)
 Bridges a Discord text channel directly into your game chat using JDA. Messages sent in the configured Discord channel will be sent as you in Minecraft chat.
 
 **How to Use & Configure:**
