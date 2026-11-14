@@ -29,7 +29,7 @@ public class MinecraftToDiscord extends Module {
     private final HttpClient httpClient = HttpClient.newHttpClient();
 
     public MinecraftToDiscord() {
-        super(Addon.CATEGORY, "MinecraftToDiscord", "Sends chat messages to a discord server using webhooks.");
+        super(Addon.CATEGORY, "minecraft-to-discord", "Sends chat messages to a discord server using webhooks.");
     }
 
     @EventHandler
