@@ -25,7 +25,7 @@
 
 ---
 
-## Modules
+# Modules
 
 
 ### [MinecraftToDiscord](https://github.com/ItsQrystal/DiscordAddon/blob/main/src/main/java/com/discord/addon/modules/MinecraftToDiscord.java)
